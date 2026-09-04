@@ -652,12 +652,27 @@ def register_search_endpoint(
                             "filter": [scope_filter]
                         }
                     },
+                    # 4 fields of top-hit fragment are used for writing buckets :
+                    "_source": [
+                        "resource_id",
+                        "resource_metadata",
+                        "temporal",
+                        "collections"
+                    ],
                     "collapse": {
                         "field": "resource_id",
                         "inner_hits": {
                             "name": "fragments",
                             "size": 100,
                             "sort": [{"_score": "desc"}],
+                            # 5 keys are used for fragments (highlight not linked to _source)
+                            "_source": [
+                                "passage_id",
+                                "title",
+                                "level",
+                                "ancestors",
+                                "citeType"
+                            ],
                             "highlight": highlight_config
                         }
                     },
