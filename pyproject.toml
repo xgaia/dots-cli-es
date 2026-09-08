@@ -16,7 +16,6 @@ dependencies = [
     "Flask",
     "httpx",
     "lxml",
-    "python-dotenv",
     "requests",
     "PyYAML",
     "pydantic>=2,<3",
