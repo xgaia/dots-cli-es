@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class SourceConfig(BaseModel):
-    DTS_URL: str
+    DTS_URL: HttpUrl
     TARGET_COLLECTION: str = ""
     CUSTOM_SETTINGS_PATH: str = ""
     ADDITIONAL_EXCLUDED_COLLECTIONS: list[str] = Field(default_factory=list)
@@ -14,7 +14,12 @@ class SourceConfig(BaseModel):
 
 
 class SearchConfig(BaseModel):
-    ELASTICSEARCH_URL: str
-    DOCUMENT_INDEX: str
-    COLLECTION_INDEX: str
-    SEARCH_RESULT_PER_PAGE: int = 200
+    ELASTICSEARCH_URL: HttpUrl
+    DOCUMENT_INDEX: str = Field(min_length=1)
+    COLLECTION_INDEX: str = Field(min_length=1)
+    SEARCH_RESULT_PER_PAGE: int = Field(default=200, ge=25)
+
+
+class IndexingConfig(BaseModel):
+    MAX_CONCURRENT_REQUESTS: int = Field(default=5, ge=1)
+    RESOURCE_WORKERS: int = Field(default=5, ge=1)
