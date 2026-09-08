@@ -4,7 +4,7 @@ from typing import Any
 
 import yaml
 
-from dots_es.config_schema import SearchConfig, SourceConfig
+from dots_es.config_schema import IndexingConfig, SearchConfig, SourceConfig
 
 # ============================================================
 # LOAD YAML CONFIG
@@ -50,12 +50,17 @@ def load_config(alias: str) -> dict:
     # Resolve environment variables
     config = resolve_env_vars(config)
 
-    # Validate the 'source' and 'config' sections against the Pydantic schema
+    # Validate the 'source', 'config' and 'indexing' sections against the Pydantic schema
     source = SourceConfig.model_validate(config.get("source", {}))
     search = SearchConfig.model_validate(config.get("config", {}))
+    indexing = IndexingConfig.model_validate(config.get("indexing", {}))
 
     # Flatten validated sections for App compatibility
-    flat_config = source.model_dump() | search.model_dump()
+    flat_config = (
+        source.model_dump(mode="json")
+        | search.model_dump(mode="json")
+        | indexing.model_dump(mode="json")
+    )
 
     # Ensure ADDITIONAL_EXCLUDED_COLLECTIONS is a lowercase set
     flat_config["ADDITIONAL_EXCLUDED_COLLECTIONS"] = set(
