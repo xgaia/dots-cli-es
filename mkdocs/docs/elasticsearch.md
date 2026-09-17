@@ -73,10 +73,10 @@ Explicit properties include `resource_id`, `passage_id`, `citeType`, `path`, `pa
 
 ```bash
 # both indexes
-dots-es-cli --config=local update-conf --rebuild
+dots-es-cli --config=config/local.yml update-conf --rebuild
 
 # a single index
-ES_PASSWORD=xxx dots-es-cli --config=prod update-conf --rebuild --indexes=dots_document
+ES_PASSWORD=xxx dots-es-cli --config=config/prod.yml update-conf --rebuild --indexes=dots_document
 ```
 
 What the command does, per index:

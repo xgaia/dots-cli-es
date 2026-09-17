@@ -114,7 +114,7 @@ pip list
 ### Initial indexing (and reindexing without configuration changes):
 
 <pre><code>
-(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>local/staging/prod</i></b>) index (--collections=<b><i>theater,ENCPOS</i></b>)
+(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>config/local.yml</i></b>) index (--collections=<b><i>theater,ENCPOS</i></b>)
 </code></pre>
 
 When the index doesn't exist it is created according to the project ES [configuration files](./dots_es/elasticsearch/).
@@ -124,7 +124,7 @@ When the index doesn't exist it is created according to the project ES [configur
 This operation will delete the pre-existing index.
 
 <pre><code>
-(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>local/staging/prod</i></b>) update-conf --rebuild --indexes=<b><i>dots_document/dots_collection</i></b>
+(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>config/local.yml</i></b>) update-conf --rebuild --indexes=<b><i>dots_document/dots_collection</i></b>
 </code></pre>
 
 The above command updates the indexes according to the project ES [configuration files](./dots_es/elasticsearch/).
@@ -203,9 +203,9 @@ dots-es-cli --help
 Usage: dots-es-cli [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --config [local|staging|prod]  select appropriate .yml file to use
-                                 [default: staging]
-  --help                         Show this message and exit.
+  --config PATH  path to the YAML configuration file
+                 [required]
+  --help         Show this message and exit.
 
 Commands:
   delete       Delete the indexes

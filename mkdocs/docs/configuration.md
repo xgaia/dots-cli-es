@@ -1,17 +1,22 @@
 # Configuration
 
-All runtime settings live in three YAML files shipped with the package:
+All runtime settings live in a YAML file of your choice, passed at runtime through the global
+`--config` option of the CLI (a path to a `.yml` file, absolute or relative). Three example files
+live in the repository under `config/`:
 
 ```
-dots_es/config/
+config/
 ├── local.yml
 ├── staging.yml
 └── prod.yml
 ```
 
-One of them is selected by the global `--config` option of the CLI
-(`--config [local|staging|prod]`, **default `staging`**), and by `--config` / the `SERVER_ENV_CONFIG`
-environment variable for the API.
+One of them is selected by the global `--config` option of the CLI, and by the `--config` argument of
+the API:
+
+```bash
+dots-es-cli --config config/local.yml …
+```
 
 ## Keys
 
@@ -49,7 +54,6 @@ environments.
 |---|---|---|
 | `ES_PASSWORD` | CLI + API | Password used to authenticate against Elasticsearch. Read directly by the clients, **never written into `ELASTICSEARCH_URL`**. Required whenever the node has security enabled. Set `ES_USER` too if the account is not `elastic`. |
 | `CUSTOM_SETTINGS_PATH` | CLI | Directory scanned for `*.conf.json` front-end settings. If unset or not a directory, no error: the exclusion set is simply empty. |
-| `SERVER_ENV_CONFIG` | API only | Overrides the `--config` argument. Intended for server environments. |
 
 !!! danger "No trailing slash in `DTS_URL`"
     The code appends the route itself — `{DTS_URL}/collection`, `{DTS_URL}/document`. A trailing
@@ -77,13 +81,13 @@ environments.
 Typical invocation with security enabled:
 
 ```bash
-ES_PASSWORD=your_password dots-es-cli --config=prod index
+ES_PASSWORD=your_password dots-es-cli --config config/prod.yml index
 ```
 
 ## How the files are loaded
 
-`load_config(alias)` resolves `dots_es/config/{alias}.yml` through `importlib.resources`, so it works
-from an installed wheel as well as from a checkout. It then:
+`load_config(config_path)` reads the YAML file passed through `--config` (or to `create_app` for the
+API) at runtime, directly from the filesystem. It then:
 
 1. replaces every `None` with an empty string;
 2. expands environment variables in **every** string value;
@@ -92,10 +96,9 @@ from an installed wheel as well as from a checkout. It then:
 4. coerces `ADDITIONAL_EXCLUDED_COLLECTIONS` into a lowercase set.
 
 !!! warning "Operational caveats"
-    - **A non-editable install freezes these files.** Because they are read from the *installed*
-      package, `pip install .` means the CLI uses the copy in `site-packages`, not the one in your
-      clone. Editing `dots_es/config/local.yml` then changes nothing until you reinstall. Use
-      `pip install -e .` while you are still adjusting the configuration.
+    - **The configuration is read at runtime.** Editing a file under `config/` takes effect on the
+      next invocation, with no reinstall. Keep the file where you run the CLI, or pass an absolute
+      path.
     - **An unset variable is left as literal text.** `${ES_PASSWORD}` stays `${ES_PASSWORD}` in the
       URL rather than becoming empty, which surfaces as a confusing connection error. Check that the
       variable is exported before blaming Elasticsearch.

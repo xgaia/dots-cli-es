@@ -17,18 +17,18 @@ def parse_es_doc_id(es_id: str) -> str:
     else:
         return es_id
 
-def create_app(config_name: str):
+def create_app(config_path: str):
     """Create the Flask application using YAML configuration.
 
-    :param config_name: alias of the config YAML (e.g., local, staging, prod)
-    :type config_name: str
+    :param config_path: Path to the YAML configuration file
+    :type config_path: str
     :return: Flask app instance
     :rtype: Flask
     """
     app = Flask(__name__)
 
-    # Load YAML config using your existing load_config function
-    config_dict = load_config(config_name)
+    # Load YAML config
+    config_dict = load_config(config_path)
     app.config.update(config_dict)
 
     # Initialize Elasticsearch client if URL is present

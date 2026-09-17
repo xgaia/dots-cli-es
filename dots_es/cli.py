@@ -2531,7 +2531,7 @@ def make_cli():
     """
 
     @click.group()
-    @click.option('--config', default="staging", type=click.Choice(["local", "staging", "prod"]), help="select appropriate .yml file to use", show_default=True)
+    @click.option('--config', required=True, type=click.Path(file_okay=True, dir_okay=False, readable=True), help="path to the YAML configuration file")
     @click.pass_context
     def cli(ctx, config):
         config_dict = load_config(config)

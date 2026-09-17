@@ -41,4 +41,4 @@ packages = ["dots_es", "dots_es.api"]
 version = { attr = "dots_es.__version__" }
 
 [tool.setuptools.package-data]
-dots_es = ["config/*.yml", "elasticsearch/*.json"]
+dots_es = ["elasticsearch/*.json"]
