@@ -5,7 +5,7 @@ from dots_es.api import create_app
 
 
 #################################################################
-# Parse CLI argument --config (path to the YAML config file) #
+# Parse CLI arguments --config (alias) and --config-dir (directory) #
 #################################################################
 
 parser = argparse.ArgumentParser(
@@ -14,8 +14,16 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     '--config',
     type=str,
-    required=True,
-    help='path to the YAML configuration file',
+    choices=["local", "staging", "prod"],
+    default='staging',
+    help='local/staging/prod to select the appropriate YAML file to use, default=staging',
+    metavar=''
+)
+parser.add_argument(
+    '--config-dir',
+    type=str,
+    default='./config',
+    help='directory containing the YAML configuration files, default=./config',
     metavar=''
 )
 args = parser.parse_args()
@@ -24,7 +32,7 @@ args = parser.parse_args()
 # Launching app with the selected environment #
 ###############################################
 
-flask_app = create_app(config_path=args.config)
+flask_app = create_app(config_dir=args.config_dir, config_name=args.config)
 
 
 def log_startup_config():
@@ -33,7 +41,7 @@ def log_startup_config():
     normally, with another corpus: the mistake is otherwise invisible.
     """
     print(
-        f"dots-api configuration : {args.config}\n"
+        f"dots-api configuration : {args.config_dir}/{args.config}.yml\n"
         f"  Elasticsearch : {flask_app.config.get('ELASTICSEARCH_URL')}\n"
         f"  documents     : {flask_app.config.get('DOCUMENT_INDEX')}\n"
         f"  collections   : {flask_app.config.get('COLLECTION_INDEX')}",

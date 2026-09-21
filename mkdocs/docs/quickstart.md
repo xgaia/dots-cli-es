@@ -14,8 +14,9 @@ source your_venv_name/bin/activate
 
 ## 2. Pick a configuration
 
-The CLI reads the YAML file passed through the global `--config` option (an absolute or relative
-path). For a first run, use the `local` template:
+The CLI reads one of three YAML files through the global `--config` option
+(`local`, `staging` or `prod`; **default `staging`**), looked up in the directory given by
+`--config-dir` (default `./config`). For a first run, use `local`:
 
 ```yaml title="config/local.yml — the keys to set"
 source:
@@ -43,7 +44,7 @@ endpoint above exposes `theater`, `ENCPOS` and `ENCPOS_c2`. See
 ## 3. Create the indexes
 
 ```bash
-dots-es-cli --config=config/local.yml update-conf --rebuild
+dots-es-cli --config=local update-conf --rebuild
 ```
 
 This applies the mappings shipped in `dots_es/elasticsearch/` to both indexes.
@@ -54,7 +55,7 @@ This applies the mappings shipped in `dots_es/elasticsearch/` to both indexes.
 ## 4. Index
 
 ```bash
-dots-es-cli --config=config/local.yml index
+dots-es-cli --config=local index
 ```
 
 The run prints a progress summary and ends with counts of collections, resources and passages, plus
@@ -64,7 +65,7 @@ the number of errors. Everything is also written to CSV files under `indexation_
 To restrict the crawl to specific collections:
 
 ```bash
-dots-es-cli --config=config/local.yml index --collections=theater
+dots-es-cli --config=local index --collections=theater
 ```
 
 ## 5. Check what landed in Elasticsearch
@@ -83,19 +84,19 @@ curl -X POST "http://elastic:$ES_PASSWORD@localhost:9200/dots_document/_refresh?
 ## 6. Search from the CLI
 
 ```bash
-dots-es-cli --config=config/local.yml search "Molière"
+dots-es-cli --config=local search "Molière"
 ```
 
 Or with a full Lucene query string:
 
 ```bash
-dots-es-cli --config=config/local.yml search -t "content:tragédie" --indexes=dots_document
+dots-es-cli --config=local search -t "content:tragédie" --indexes=dots_document
 ```
 
 ## 7. Run the search API
 
 ```bash
-dots-api --config=config/local.yml
+dots-api --config=local
 ```
 
 Then open:
@@ -113,5 +114,5 @@ parameter and the two response shapes.
 commands:
 
 ```bash
-ES_PASSWORD=your_password dots-es-cli --config=config/prod.yml index
+ES_PASSWORD=your_password dots-es-cli --config=prod index
 ```

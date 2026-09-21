@@ -20,7 +20,7 @@ path/to/elasticsearch/bin/elasticsearch-plugin install analysis-icu
 it **deletes the index**:
 
 ```bash
-dots-es-cli --config=config/local.yml update-conf --rebuild --indexes=dots_document
+dots-es-cli --config=local update-conf --rebuild --indexes=dots_document
 ```
 
 ## Elasticsearch rejects the connection (401)
@@ -29,7 +29,7 @@ The node has security enabled and `ES_PASSWORD` is unset or wrong. Credentials a
 environment, never from `ELASTICSEARCH_URL`:
 
 ```bash
-ES_PASSWORD=your_password dots-es-cli --config=config/prod.yml index
+ES_PASSWORD=your_password dots-es-cli --config=prod index
 ```
 
 Set `ES_USER` as well if the account is not `elastic`.

@@ -1,7 +1,7 @@
 # Indexing
 
 ```bash
-dots-es-cli --config config/local.yml index [--collections id1,id2]
+dots-es-cli --config local index [--collections id1,id2]
 ```
 
 ## What a run does
@@ -41,13 +41,13 @@ dots-es-cli --config config/local.yml index [--collections id1,id2]
 
 ```bash
 # full local run
-dots-es-cli --config=config/local.yml index
+dots-es-cli --config=local index
 
 # production, with ES security
-ES_PASSWORD=your_password dots-es-cli --config=config/prod.yml index
+ES_PASSWORD=your_password dots-es-cli --config=prod index
 
 # only two collections
-dots-es-cli --config=config/staging.yml index --collections=theater,ENCPOS
+dots-es-cli --config=staging index --collections=theater,ENCPOS
 ```
 
 ## Excluded collections

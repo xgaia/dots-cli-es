@@ -2531,10 +2531,11 @@ def make_cli():
     """
 
     @click.group()
-    @click.option('--config', required=True, type=click.Path(file_okay=True, dir_okay=False, readable=True), help="path to the YAML configuration file")
+    @click.option('--config', default="staging", type=click.Choice(["local", "staging", "prod"]), help="select appropriate .yml file to use", show_default=True)
+    @click.option('--config-dir', default="./config", type=click.Path(file_okay=False, dir_okay=True, readable=True), help="directory containing the YAML configuration files", show_default=True)
     @click.pass_context
-    def cli(ctx, config):
-        config_dict = load_config(config)
+    def cli(ctx, config, config_dir):
+        config_dict = load_config(config_dir, config)
         ctx.obj = CLIContext(config_dict)
 
     @click.command("search")

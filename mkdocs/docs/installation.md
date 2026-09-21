@@ -83,15 +83,16 @@ pip install .
 This installs the `dots_es` package plus the **`dots-es-cli`** and **`dots-api`** console scripts.
 
 !!! note "Configuration is read at runtime"
-    Point the CLI or the API at a YAML file with `--config` (an absolute or relative path):
+    Select a YAML file with `--config` (`local`, `staging` or `prod`, default `staging`), looked up
+    in the directory given by `--config-dir` (default `./config`):
 
     ```bash
-    dots-es-cli --config config/local.yml index
+    dots-es-cli --config local index
     ```
 
-    Copy one of the templates from the repository `config/` directory (or provide your own file).
-    Because the file is read on every invocation, editing it takes effect immediately, with no
-    reinstall.
+    Copy one of the templates from the repository `config/` directory (or provide your own files and
+    point `--config-dir` at them). Because the file is read on every invocation, editing it takes
+    effect immediately, with no reinstall.
 
 For development (editable install and dev tooling):
 

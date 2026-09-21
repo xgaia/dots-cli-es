@@ -1,8 +1,8 @@
 # Configuration
 
-All runtime settings live in a YAML file of your choice, passed at runtime through the global
-`--config` option of the CLI (a path to a `.yml` file, absolute or relative). Three example files
-live in the repository under `config/`:
+All runtime settings live in three YAML files selected by the global `--config` option of the CLI
+(`local`, `staging` or `prod`, **default `staging`**), looked up in the directory given by
+`--config-dir` (default `./config`). Three example files live in the repository under `config/`:
 
 ```
 config/
@@ -12,10 +12,10 @@ config/
 ```
 
 One of them is selected by the global `--config` option of the CLI, and by the `--config` argument of
-the API:
+the API — the file loaded is `{config-dir}/{config}.yml`:
 
 ```bash
-dots-es-cli --config config/local.yml …
+dots-es-cli --config local …
 ```
 
 ## Keys
@@ -81,13 +81,13 @@ environments.
 Typical invocation with security enabled:
 
 ```bash
-ES_PASSWORD=your_password dots-es-cli --config config/prod.yml index
+ES_PASSWORD=your_password dots-es-cli --config prod index
 ```
 
 ## How the files are loaded
 
-`load_config(config_path)` reads the YAML file passed through `--config` (or to `create_app` for the
-API) at runtime, directly from the filesystem. It then:
+`load_config(config_dir, config_name)` reads `{config_dir}/{config_name}.yml` — the file selected by
+`--config` (or `create_app` for the API) — at runtime, directly from the filesystem. It then:
 
 1. replaces every `None` with an empty string;
 2. expands environment variables in **every** string value;
@@ -97,8 +97,8 @@ API) at runtime, directly from the filesystem. It then:
 
 !!! warning "Operational caveats"
     - **The configuration is read at runtime.** Editing a file under `config/` takes effect on the
-      next invocation, with no reinstall. Keep the file where you run the CLI, or pass an absolute
-      path.
+      next invocation, with no reinstall. Point `--config-dir` at the directory holding your files
+      (an absolute or relative path).
     - **An unset variable is left as literal text.** `${ES_PASSWORD}` stays `${ES_PASSWORD}` in the
       URL rather than becoming empty, which surfaces as a confusing connection error. Check that the
       variable is exported before blaming Elasticsearch.
