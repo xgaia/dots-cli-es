@@ -1,7 +1,7 @@
 # Indexing
 
 ```bash
-dots-es-cli --config local index [--collections id1,id2]
+dots-es-cli [--config local|staging|prod] index [--collections id1,id2]
 ```
 
 ## What a run does

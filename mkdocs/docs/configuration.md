@@ -1,8 +1,7 @@
 # Configuration
 
-All runtime settings live in three YAML files selected by the global `--config` option of the CLI
-(`local`, `staging` or `prod`, **default `staging`**), looked up in the directory given by
-`--config-dir` (default `./config`). Three example files live in the repository under `config/`:
+All runtime settings live in three YAML files, kept in the `config/` directory of the deployment —
+outside the installed package, so they can be edited without reinstalling anything:
 
 ```
 config/
@@ -11,12 +10,10 @@ config/
 └── prod.yml
 ```
 
-One of them is selected by the global `--config` option of the CLI, and by the `--config` argument of
-the API — the file loaded is `{config-dir}/{config}.yml`:
-
-```bash
-dots-es-cli --config local …
-```
+One of them is selected by the global `--config` option of the CLI
+(`--config [local|staging|prod]`, **default `staging`**), and by `--config` / the `SERVER_ENV_CONFIG`
+environment variable for the API. The file loaded is always `config/{alias}.yml`, and the directory
+is fixed: one deployment, one configuration directory.
 
 ## Keys
 
@@ -54,6 +51,7 @@ environments.
 |---|---|---|
 | `ES_PASSWORD` | CLI + API | Password used to authenticate against Elasticsearch. Read directly by the clients, **never written into `ELASTICSEARCH_URL`**. Required whenever the node has security enabled. Set `ES_USER` too if the account is not `elastic`. |
 | `CUSTOM_SETTINGS_PATH` | CLI | Directory scanned for `*.conf.json` front-end settings. If unset or not a directory, no error: the exclusion set is simply empty. |
+| `SERVER_ENV_CONFIG` | API only | Overrides the `--config` argument. Intended for server environments. |
 
 !!! danger "No trailing slash in `DTS_URL`"
     The code appends the route itself — `{DTS_URL}/collection`, `{DTS_URL}/document`. A trailing
@@ -81,13 +79,13 @@ environments.
 Typical invocation with security enabled:
 
 ```bash
-ES_PASSWORD=your_password dots-es-cli --config prod index
+ES_PASSWORD=your_password dots-es-cli --config=prod index
 ```
 
 ## How the files are loaded
 
-`load_config(config_dir, config_name)` reads `{config_dir}/{config_name}.yml` — the file selected by
-`--config` (or `create_app` for the API) — at runtime, directly from the filesystem. It then:
+`load_config(alias)` reads `config/{alias}.yml` at runtime, directly from the filesystem, relative to
+the directory the command is run from. It then:
 
 1. replaces every `None` with an empty string;
 2. expands environment variables in **every** string value;
@@ -97,8 +95,10 @@ ES_PASSWORD=your_password dots-es-cli --config prod index
 
 !!! warning "Operational caveats"
     - **The configuration is read at runtime.** Editing a file under `config/` takes effect on the
-      next invocation, with no reinstall. Point `--config-dir` at the directory holding your files
-      (an absolute or relative path).
+      next invocation, with no reinstall — a plain `pip install .` is enough.
+    - **Run the command from the deployment directory.** The path is resolved against the working
+      directory, so a service or a cron job must set it to the directory holding `config/`.
+      Otherwise the run stops at once: `Config file not found: /somewhere/config/prod.yml`.
     - **An unset variable is left as literal text.** `${ES_PASSWORD}` stays `${ES_PASSWORD}` in the
       URL rather than becoming empty, which surfaces as a confusing connection error. Check that the
       variable is exported before blaming Elasticsearch.

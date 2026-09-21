@@ -4,6 +4,10 @@ from typing import Any
 
 import yaml
 
+# Single, fixed location for the YAML configuration, relative to the working directory
+# Deliberately not an option: one deployment, one config directory.
+CONFIG_DIR = Path("config")
+
 # ============================================================
 # LOAD YAML CONFIG
 # ============================================================
@@ -59,22 +63,27 @@ def es_basic_auth():
     return os.environ.get("ES_USER", "elastic"), password
 
 
-def load_config(config_dir: str = "./config", config_name: str = "staging") -> dict:
+def load_config(alias: str = "staging") -> dict:
     """Load a YAML configuration file, replace None with empty strings, resolve environment variables,
     and flatten 'source' + 'config' sections for compatibility with App.
 
-    :param config_dir: Directory containing the YAML configuration files
-    :type config_dir: str
-    :param config_name: Configuration alias (e.g., local, staging, prod), selects {config_name}.yml
-    :type config_name: str
+    The files live in the ``config`` directory of the deployment, read from the
+    working directory at runtime rather than from the installed package: a plain
+    ``pip install .`` is enough, and editing a file takes effect on the next run.
+
+    :param alias: Configuration alias corresponding to config/{alias}.yml
+    :type alias: str
     :return: Flattened configuration dictionary
     :rtype: dict
     :raises FileNotFoundError: if the YAML config file does not exist
     """
-    path = Path(config_dir) / f"{config_name}.yml"
+    path = CONFIG_DIR / f"{alias}.yml"
 
     if not path.is_file():
-        raise FileNotFoundError(f"Config file not found: {path}")
+        raise FileNotFoundError(
+            f"Config file not found: {path.resolve()} "
+            f"(run the command from the directory holding {CONFIG_DIR}/)"
+        )
 
     with path.open("r", encoding="utf-8") as f:
         config = yaml.safe_load(f)

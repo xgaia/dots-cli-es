@@ -82,17 +82,17 @@ pip install .
 
 This installs the `dots_es` package plus the **`dots-es-cli`** and **`dots-api`** console scripts.
 
-!!! note "Configuration is read at runtime"
-    Select a YAML file with `--config` (`local`, `staging` or `prod`, default `staging`), looked up
-    in the directory given by `--config-dir` (default `./config`):
+!!! note "The configuration stays in your clone"
+    The YAML files are **not** copied into `site-packages`: they are read from the `config/`
+    directory of the checkout, on every invocation. Editing `config/local.yml` to change
+    `TARGET_COLLECTION`, the excluded collections or the DTS endpoint takes effect immediately, with
+    no reinstall — a plain `pip install .` is enough.
 
     ```bash
-    dots-es-cli --config local index
+    dots-es-cli [--config local|staging|prod] index
     ```
 
-    Copy one of the templates from the repository `config/` directory (or provide your own files and
-    point `--config-dir` at them). Because the file is read on every invocation, editing it takes
-    effect immediately, with no reinstall.
+    Run the commands from the root of the checkout, which is where `config/` sits.
 
 For development (editable install and dev tooling):
 

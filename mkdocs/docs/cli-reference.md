@@ -5,7 +5,6 @@ dots-es-cli [OPTIONS] COMMAND [ARGS]...
 
 Options:
   --config [local|staging|prod]  select appropriate .yml file to use  [default: staging]
-  --config-dir PATH              directory containing the YAML configuration files  [default: ./config]
   --help                         Show this message and exit.
 
 Commands:
@@ -15,8 +14,8 @@ Commands:
   update-conf  Update the index configuration and mappings
 ```
 
-The global `--config` option selects which [YAML file](configuration.md) is loaded, and `--config-dir`
-gives the directory containing it (default `./config`). They must come **before** the command:
+The global `--config` option selects which [YAML file](configuration.md) is loaded. It must come
+**before** the command:
 
 ```bash
 dots-es-cli --config=local index      # correct
@@ -104,8 +103,8 @@ dots-es-cli search -t "content:tragédie AND type.keyword:fragment" --indexes=do
 ## `dots-api`
 
 ```
-dots-api --config local
+dots-api [--config local|staging|prod]
 ```
 
-Starts the Flask search API on port 5003 with the YAML file selected by `--config`, looked up in
-`--config-dir`. See [Search API](search-api.md).
+Starts the Flask search API on port 5003. The `SERVER_ENV_CONFIG` environment variable overrides
+`--config`. See [Search API](search-api.md).

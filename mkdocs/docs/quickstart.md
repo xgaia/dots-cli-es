@@ -15,8 +15,8 @@ source your_venv_name/bin/activate
 ## 2. Pick a configuration
 
 The CLI reads one of three YAML files through the global `--config` option
-(`local`, `staging` or `prod`; **default `staging`**), looked up in the directory given by
-`--config-dir` (default `./config`). For a first run, use `local`:
+(`local`, `staging` or `prod`; **default `staging`**), from the `config/` directory of the checkout.
+For a first run, use `local`:
 
 ```yaml title="config/local.yml — the keys to set"
 source:

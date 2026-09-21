@@ -4,35 +4,43 @@ import os
 from dots_es.api import create_app
 
 
+POSSIBLE_ENV_VALUES = [ "local", "staging", "prod" ]
+
+
 #################################################################
-# Parse CLI arguments --config (alias) and --config-dir (directory) #
+# Parse CLI argument --config (default = staging) #
 #################################################################
 
+
+# Creating a dictionary of flask_app.py options (--config=staging) and their matching environment variables files aliases (staging)
+# Creating a flask_app.py --help listing these options
 parser = argparse.ArgumentParser(
     description='ES app for DoTS'
 )
 parser.add_argument(
     '--config',
     type=str,
-    choices=["local", "staging", "prod"],
+    choices=POSSIBLE_ENV_VALUES,
     default='staging',
-    help='local/staging/prod to select the appropriate YAML file to use, default=staging',
-    metavar=''
-)
-parser.add_argument(
-    '--config-dir',
-    type=str,
-    default='./config',
-    help='directory containing the YAML configuration files, default=./config',
+    help="/".join(POSSIBLE_ENV_VALUES) + ' to select the appropriate YAML file to use, default=staging',
     metavar=''
 )
 args = parser.parse_args()
+# Checking on the .yml to be selected for deployment
+# For server deployments, the .yml name can be provided from the server configuration
+server_env_config_env_var = os.environ.get('SERVER_ENV_CONFIG')
+if server_env_config_env_var:
+    print("Server provided a yml config alias: ", server_env_config_env_var)
+    env_alias = server_env_config_env_var
+# Otherwise, check if .yml file to use is provided in command line (with '--config=' option)
+else:
+    env_alias = args.config
 
 ###############################################
 # Launching app with the selected environment #
 ###############################################
 
-flask_app = create_app(config_dir=args.config_dir, config_name=args.config)
+flask_app = create_app(config_name=env_alias)
 
 
 def log_startup_config():
@@ -41,7 +49,7 @@ def log_startup_config():
     normally, with another corpus: the mistake is otherwise invisible.
     """
     print(
-        f"dots-api configuration : {args.config_dir}/{args.config}.yml\n"
+        f"dots-api configuration : config/{env_alias}.yml\n"
         f"  Elasticsearch : {flask_app.config.get('ELASTICSEARCH_URL')}\n"
         f"  documents     : {flask_app.config.get('DOCUMENT_INDEX')}\n"
         f"  collections   : {flask_app.config.get('COLLECTION_INDEX')}",
@@ -50,8 +58,9 @@ def log_startup_config():
 
 
 # Under the development server the module is imported twice; only the reloaded
-# process serves.
-if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+# process serves. Under a WSGI server there is no reloader, and the alias comes
+# from SERVER_ENV_CONFIG.
+if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or server_env_config_env_var:
     log_startup_config()
 
 

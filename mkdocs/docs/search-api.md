@@ -1,12 +1,12 @@
 # Search API
 
 ```bash
-dots-api --config local
+dots-api [--config local|staging|prod]
 ```
 
 The Flask application listens on **port 5003**, on `localhost`, with debug enabled. On servers it is
-served through uWSGI as `flask_app:flask_app`. The YAML file is selected by `--config`
-(`local`/`staging`/`prod`, default `staging`) in `--config-dir` (default `./config`).
+served through uWSGI as `flask_app:flask_app`, and the `SERVER_ENV_CONFIG` environment variable
+overrides `--config`.
 
 Smoke test:
 
