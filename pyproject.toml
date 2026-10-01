@@ -27,6 +27,7 @@ dev = [
     "build",
     "pip-tools",
     "pytest",
+    "pytest-cov",
     "wheel",
 ]
 
@@ -42,3 +43,12 @@ version = { attr = "dots_es.__version__" }
 
 [tool.setuptools.package-data]
 dots_es = ["elasticsearch/*.json"]
+
+[tool.coverage.run]
+source = ["dots_es"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "if __name__ == .__main__.:",
+]

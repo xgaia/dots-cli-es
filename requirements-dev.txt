@@ -51,6 +51,8 @@ click==8.5.0
     #   pip-tools
 comm==0.2.3
     # via ipykernel
+coverage==7.16.2
+    # via pytest-cov
 debugpy==1.8.21
     # via ipykernel
 defusedxml==0.7.1
@@ -257,6 +259,8 @@ pyproject-hooks==1.2.0
     #   build
     #   pip-tools
 pytest==9.1.1
+    # via dots-es (pyproject.toml)
+pytest-cov==7.1.0
     # via dots-es (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
