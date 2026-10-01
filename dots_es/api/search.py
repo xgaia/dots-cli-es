@@ -352,9 +352,14 @@ def register_search_endpoint(
     def api_search_endpoint():
         start_time: float = time.time()
 
+        no_highlight = isinstance(request.args.get("no-highlight", False), str)
+
         index: str = request.args.get("index", None)
-        if index is None or len(index) == 0:
-            index = current_app.config["DOCUMENT_INDEX"]
+        if not index:
+            index = (
+                current_app.config["RESOURCE_INDEX"] if no_highlight
+                else current_app.config["PASSAGE_INDEX"]
+            )
 
         temporal_fields = get_temporal_fields(
             current_app.elasticsearch,
@@ -435,8 +440,6 @@ def register_search_endpoint(
             except json.JSONDecodeError:
                 selected_facets = {}
 
-
-        no_highlight = isinstance(request.args.get("no-highlight", False), str)
 
         # Pagination
         default_page_size = current_app.config["SEARCH_RESULT_PER_PAGE"]
@@ -682,7 +685,7 @@ def register_search_endpoint(
 
                 # fvh: more balanced context around the term.
                 # Requires "with_positions_offsets" term_vector on
-                # content (set in dots_document.conf.json).
+                # content (set in dots_passage.conf.json).
                 # fragment_offset: context before the highlighted term (fvh only).
                 # No boundary_scanner: with fvh, it can stretch fragments
                 # far beyond fragment_size.
@@ -972,9 +975,10 @@ def register_search_endpoint(
                 }
 
             # Collection index check common to 3 possible responses:
-            # None when no collection_id has been provided, which is irrelevant
+            # None when no collection_id has been provided, which is irrelevant.
+            # Resources always live in RESOURCE_INDEX, whichever mode is queried.
             r["collection_indexed"] = (
-                is_collection_indexed(index, collection_id)
+                is_collection_indexed(current_app.config["RESOURCE_INDEX"], collection_id)
                 if collection_id
                 else None
             )

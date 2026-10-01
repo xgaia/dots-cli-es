@@ -835,7 +835,7 @@ def extract_searchfield_facets(aggregations, exclude_ids: set[str] | None = None
 
 # Property families indexed under `resource_metadata`,
 # and therefore covered by the `resource_metadata.*`
-# dynamic template from `dots_document.conf.json`.
+# dynamic template from the index mapping files.
 METADATA_FAMILIES = (
     SearchFieldFamily.DCT,
     SearchFieldFamily.SCHEMA,

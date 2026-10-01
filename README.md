@@ -104,6 +104,12 @@ pip list
 
 - Follow the ES installation & initial indexing instructions [above](#prerequisite---install-elasticsearch)
 
+The documents are indexed into two dedicated indices:
+- `dots_resource` — one document per DTS **resource** (`_id` = resource id), carrying the full metadata.
+- `dots_passage` — one document per **passage** (a TEI fragment, `_id = "{resource_id}::{passage_id}"`), carrying the full text, ancestors and the metadata subset needed for facets, filters and sorting.
+
+The collections live in `dots_collection`.
+
 > :warning: Below (re)indexing commands are run within the app virtual environment:
 > reactivate the virtual environment if needed (<code>source <b><i>your_venv_name</i></b>/bin/activate</code>)
 >
@@ -124,7 +130,7 @@ When the index doesn't exist it is created according to the project ES [configur
 This operation will delete the pre-existing index.
 
 <pre><code>
-(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>local/staging/prod</i></b>) update-conf --rebuild --indexes=<b><i>dots_document/dots_collection</i></b>
+(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>local/staging/prod</i></b>) update-conf --rebuild --indexes=<b><i>dots_resource/dots_passage/dots_collection</i></b>
 </code></pre>
 
 The above command updates the indexes according to the project ES [configuration files](./dots_es/elasticsearch/).
@@ -133,13 +139,15 @@ The above command updates the indexes according to the project ES [configuration
 
 - with ES security disabled:
 <pre><code>
-curl -X POST "http://localhost:9200/dots_document/_refresh?pretty"
+curl -X POST "http://localhost:9200/dots_resource/_refresh?pretty"
+curl -X POST "http://localhost:9200/dots_passage/_refresh?pretty"
 curl http://localhost:9200/_cat/indices?v
 </code></pre>
 
 - with ES security enabled:
 <pre><code>
-curl -X POST "http://elastic:<b><i>ELASTIC_PASSWORD</i></b>@localhost:9200/dots_document/_refresh?pretty"
+curl -X POST "http://elastic:<b><i>ELASTIC_PASSWORD</i></b>@localhost:9200/dots_resource/_refresh?pretty"
+curl -X POST "http://elastic:<b><i>ELASTIC_PASSWORD</i></b>@localhost:9200/dots_passage/_refresh?pretty"
 curl http://elastic:<b><i>ELASTIC_PASSWORD</i></b>@localhost:9200/_cat/indices?v
 </code></pre>
 
@@ -151,7 +159,7 @@ curl http://elastic:<b><i>ELASTIC_PASSWORD</i></b>@localhost:9200/_cat/indices?v
 - Reactivate the virtual environment if needed (<code>source <b><i>your_venv_name</i></b>/bin/activate</code>)
 - Launch:
   <code>(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-api</code> (or <code>python3 flask_app.py</code>)
-- Then visit http://localhost:5003/api/1.0/search?query=\*&index=dots_document to test it is running
+- Then visit http://localhost:5003/api/1.0/search?query=\*&index=dots_resource to test it is running
 
 ## Launch the front-end:
 

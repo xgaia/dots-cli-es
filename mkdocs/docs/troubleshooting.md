@@ -20,7 +20,7 @@ path/to/elasticsearch/bin/elasticsearch-plugin install analysis-icu
 it **deletes the index**:
 
 ```bash
-dots-es-cli --config=local update-conf --rebuild --indexes=dots_document
+dots-es-cli --config=local update-conf --rebuild --indexes=dots_resource,dots_passage
 ```
 
 ## Elasticsearch rejects the connection (401)

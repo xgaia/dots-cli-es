@@ -11,7 +11,7 @@ overrides `--config`.
 Smoke test:
 
 ```
-http://localhost:5003/api/1.0/search?query=*&index=dots_document
+http://localhost:5003/api/1.0/search?query=*&index=dots_resource
 ```
 
 ## The endpoint

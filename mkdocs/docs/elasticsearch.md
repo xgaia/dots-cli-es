@@ -4,15 +4,16 @@ Three JSON files shipped with the package define how the indexes are built:
 
 ```
 dots_es/elasticsearch/
-├── _global.conf.json          # settings, applied to both indexes
+├── _global.conf.json          # settings, applied to every index
 ├── dots_collection.conf.json  # mappings for the collections index
-└── dots_document.conf.json    # mappings for the resources + passages index
+├── dots_resource.conf.json    # mappings for the resources index
+└── dots_passage.conf.json     # mappings for the passages (fragments) index
 ```
 
 !!! warning "File name must equal index name"
-    `update-conf` looks for `{index_name}.conf.json`. If you rename `DOCUMENT_INDEX` in the YAML
-    without renaming the JSON file accordingly, the command prints *"conf not found"* and moves on —
-    the index is created with no mapping at all.
+    `update-conf` looks for `{index_name}.conf.json`. If you rename `RESOURCE_INDEX` or `PASSAGE_INDEX`
+    in the YAML without renaming the JSON file accordingly, the command prints *"conf not found"* and
+    moves on — the index is created with no mapping at all.
 
 ## `_global.conf.json` — shared settings
 
@@ -47,10 +48,27 @@ the built-in `french` analyzer instead.
     Members are stored but not indexed. This is deliberate: indexing them would create one field per
     member id and blow through the field-count limit.
 
-## `dots_document.conf.json`
+## `dots_resource.conf.json`
 
-`"dynamic": "strict"` plus six **dynamic templates**, which is what lets new metadata fields appear
+`"dynamic": "strict"` plus five **dynamic templates**, which is what lets new metadata fields appear
 without a mapping change:
+
+| Template | Matches | Mapped as |
+|---|---|---|
+| `temporal_dates` | `temporal.*_iso` | `date` |
+| `temporal_years` | `temporal.*_start` | `integer` |
+| `temporal_years_end` | `temporal.*_end` | `integer` |
+| `temporal_strings` | `temporal.*` (string) | `keyword` |
+| `resource_metadata_strings` | `resource_metadata.*` (string) | `text` / `folding`, `term_vector: with_positions_offsets`, sub-fields `keyword` and `sort` |
+
+Explicit properties include `type`, `resource_id`, `level` (keyword / integer), `collections`
+(nested) and `collection_facets` (keyword), plus the `resource_metadata` and `temporal` dynamic
+objects.
+
+## `dots_passage.conf.json`
+
+Same `"dynamic": "strict"` and the six dynamic templates below, for the full-text index holding one
+document per passage (TEI fragment):
 
 | Template | Matches | Mapped as |
 |---|---|---|
@@ -63,7 +81,9 @@ without a mapping change:
 
 Explicit properties include `resource_id`, `passage_id`, `citeType`, `path`, `path_ids`,
 `collection_facets` (keyword), `level` (integer), `title` and `content` (`text` / `folding`), plus two
-**nested** objects: `ancestors` and `collections`.
+**nested** objects: `ancestors` and `collections`. The `resource_metadata` object is stored as a
+**subset** of the resource metadata, reduced to the fields of the `SearchField` contract (facets,
+filters and sorting).
 
 !!! important "`term_vector` is not optional"
     `content` is mapped with `term_vector: with_positions_offsets` because the search API uses the
@@ -76,7 +96,7 @@ Explicit properties include `resource_id`, `passage_id`, `citeType`, `path`, `pa
 dots-es-cli --config=local update-conf --rebuild
 
 # a single index
-ES_PASSWORD=xxx dots-es-cli --config=prod update-conf --rebuild --indexes=dots_document
+ES_PASSWORD=xxx dots-es-cli --config=prod update-conf --rebuild --indexes=dots_passage
 ```
 
 What the command does, per index:
@@ -99,7 +119,7 @@ When `index` runs against an existing index, it compares the live `dynamic` sett
 the conf file and prints a warning such as:
 
 ```
-⚠️ Index dots_document mapping 'dynamic=true' differs from conf
+⚠️ Index dots_resource mapping 'dynamic=true' differs from conf
 ```
 
 That warning means the conf file was **never applied** to this index — run `update-conf --rebuild`

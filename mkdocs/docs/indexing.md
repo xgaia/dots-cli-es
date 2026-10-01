@@ -73,7 +73,8 @@ They are the reason `DTS_URL` must stay reachable even though the graph is prefe
 Refresh and count:
 
 ```bash
-curl -X POST "http://localhost:9200/dots_document/_refresh?pretty"
+curl -X POST "http://localhost:9200/dots_resource/_refresh?pretty"
+curl -X POST "http://localhost:9200/dots_passage/_refresh?pretty"
 curl "http://localhost:9200/_cat/indices?v"
 ```
 

@@ -48,12 +48,12 @@ Applies the [mapping files](elasticsearch.md) to one or both indexes.
 
 | Option | Default | Effect |
 |---|---|---|
-| `--indexes` | both indexes | Comma-separated index names. |
+| `--indexes` | all indexes | Comma-separated index names. |
 | `--rebuild` | off | **Deletes the index** before recreating it. |
 
 ```bash
 dots-es-cli --config=local update-conf --rebuild
-ES_PASSWORD=xxx dots-es-cli --config=prod update-conf --rebuild --indexes=dots_document
+ES_PASSWORD=xxx dots-es-cli --config=prod update-conf --rebuild --indexes=dots_resource,dots_passage
 ```
 
 Without `--rebuild` on an existing index, Elasticsearch answers `resource_already_exists_exception`
@@ -73,7 +73,7 @@ Deletes indexes outright.
 | `--indexes` | **required** | Comma-separated index names. |
 
 ```bash
-dots-es-cli --config=local delete --indexes=dots_document
+dots-es-cli --config=local delete --indexes=dots_resource,dots_passage
 ```
 
 ---
@@ -85,12 +85,12 @@ A convenience query runner; the result is pretty-printed to stdout.
 | Argument / option | Default | Effect |
 |---|---|---|
 | `QUERY` | required | The query string. |
-| `--indexes` | both indexes | Comma-separated index names. |
+| `--indexes` | all indexes | Comma-separated index names. |
 | `-t`, `--term` | off | Switches from a `match` on `content` to a full Lucene `query_string`. |
 
 ```bash
 dots-es-cli --config=local search "Molière"
-dots-es-cli search -t "content:tragédie AND type.keyword:fragment" --indexes=dots_document
+dots-es-cli search -t "content:tragédie AND type.keyword:fragment" --indexes=dots_passage
 ```
 
 !!! note "`--term` is the *broader* mode"

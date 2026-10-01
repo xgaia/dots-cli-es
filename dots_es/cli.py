@@ -38,7 +38,10 @@ class App:
         ) if self.config.get("ELASTICSEARCH_URL") else None
 
         # Combined indexes string for ES
-        self.all_indexes = f"{self.config['DOCUMENT_INDEX']},{self.config['COLLECTION_INDEX']}"
+        self.all_indexes = (
+            f"{self.config['RESOURCE_INDEX']},{self.config['PASSAGE_INDEX']},"
+            f"{self.config['COLLECTION_INDEX']}"
+        )
 
         # Store excluded collections as lowercase for case-insensitive comparison
         self.excluded_collections = {c.lower() for c in self.config.get("ADDITIONAL_EXCLUDED_COLLECTIONS", [])}
@@ -136,11 +139,11 @@ def get_indexation_csv_paths(app):
         ),
         "document_exceptions": os.path.join(
             base_dir,
-            f"{ts}_{app.config['DOCUMENT_INDEX']}_indexation_exceptions.csv"
+            f"{ts}_{app.config['PASSAGE_INDEX']}_indexation_exceptions.csv"
         ),
         "document_no_text": os.path.join(
             base_dir,
-            f"{ts}_{app.config['DOCUMENT_INDEX']}_no_text.csv"
+            f"{ts}_{app.config['PASSAGE_INDEX']}_no_text.csv"
         ),
         "collection_exceptions": os.path.join(
             base_dir,
@@ -1303,7 +1306,7 @@ async def index_resource_passages_async(
     collection_id = collection_metadata["id"]
 
     print("index_resource_passages (fragments mode)", resource_id)
-    print("index used for resource indexation", app.config["DOCUMENT_INDEX"])
+    print("index used for passages indexation", app.config["PASSAGE_INDEX"])
 
     fragments = resource_metadata.get("fragments") or []
 
@@ -1348,7 +1351,7 @@ async def index_resource_passages_async(
                     "dublincore": collection_metadata.get("dublincore", {}),
                 }],
                 "collection_facets": build_collection_facets(collection_metadata),
-                "resource_metadata": sanitize_resource_metadata(
+                "resource_metadata": filter_resource_metadata(
                     resource_metadata
                 ),
                 "temporal": temporal
@@ -1414,7 +1417,7 @@ async def index_resource_passages_async(
                     "dublincore": collection_metadata.get("dublincore", {}),
                 }],
                 "collection_facets": build_collection_facets(collection_metadata),
-                "resource_metadata": sanitize_resource_metadata(
+                "resource_metadata": filter_resource_metadata(
                     resource_metadata
                 ),
                 #10juillet "resource_metadata": sanitize_resource_metadata(resource_metadata),
@@ -2612,8 +2615,8 @@ def make_cli():
             - Crawl des collections et resources
             - Écriture des fichiers JSONL
             - Indexation Elasticsearch via index_jsonl()
-                - passages (DOCUMENT_INDEX)
-                - documents (DOCUMENT_INDEX)
+                - passages (PASSAGE_INDEX)
+                - documents (RESOURCE_INDEX)
                 - collections (COLLECTION_INDEX)
             - Optionally, limit indexing to specific collections with --collections.
         """
@@ -2621,7 +2624,8 @@ def make_cli():
        # crawler and extract DTS data
         app = cli_ctx.app
         es = app.elasticsearch
-        doc_index = app.config["DOCUMENT_INDEX"]
+        resource_index = app.config["RESOURCE_INDEX"]
+        passage_index = app.config["PASSAGE_INDEX"]
         coll_index = app.config["COLLECTION_INDEX"]
 
         MERGE_COLLECTIONS_SCRIPT = """
@@ -2645,7 +2649,7 @@ def make_cli():
 
         print('index collections:', collections)
         print('index _index_name:', app.config['COLLECTION_INDEX'])
-        print('index _index_name:', app.config['DOCUMENT_INDEX'])
+        print('index _index_name:', app.config['RESOURCE_INDEX'], '/', app.config['PASSAGE_INDEX'])
         try:
             _index_name = app.config['COLLECTION_INDEX']
             asyncio.run(dotsplorer(
@@ -2660,7 +2664,7 @@ def make_cli():
 
         # Indexation ES
         # try:
-        for index_name in (doc_index, coll_index):
+        for index_name in (resource_index, passage_index, coll_index):
             if not es.indices.exists(index=index_name):
                 print(f"⚠️ Index {index_name} not found → creating with correct mapping")
                 # Appel positionnel correct pour update_conf
@@ -2707,7 +2711,7 @@ def make_cli():
                         doc = json.loads(line)
                         apply_collection_scope(doc, collection_scopes)
 
-                        bulk_actions.append({"index": {"_index": app.config["DOCUMENT_INDEX"],
+                        bulk_actions.append({"index": {"_index": app.config["PASSAGE_INDEX"],
                                                        "_id": f'{doc["resource_id"]}::{doc["passage_id"]}'}})
                         bulk_actions.append(doc)
 
@@ -2781,7 +2785,7 @@ def make_cli():
 
                         apply_collection_scope(doc, collection_scopes)
                         app.elasticsearch.index(
-                            index=app.config["DOCUMENT_INDEX"],
+                            index=app.config["RESOURCE_INDEX"],
                             id=doc["resource_metadata"]["id"],
                             body=doc
                         )
