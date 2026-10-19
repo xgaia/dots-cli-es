@@ -481,21 +481,39 @@ def extract_resources_facet(aggregations: dict, resource_index: str) -> list:
     return values
 
 
-def get_granularities(index: str, collection_id: str) -> list:
+def build_granularities_body(collection_id: str, perimeter_filters: list | None = None) -> dict:
     """
-    Fragment types (citeType) of the collection, the levels a fragment search can list.
+    ES body of the citeType aggregation: the fragment types of the collection
+    present in the selected perimeter (collections, resources), the levels a
+    fragment search can offer.
     """
-    result = current_app.elasticsearch.search(index=index, body={
+    return {
         "size": 0,
         "query": {
             "bool": {
-                "filter": [{"term": {"type.keyword": "fragment"}}, build_scope_filter(collection_id)]
+                "filter": [
+                    {"term": {"type.keyword": "fragment"}},
+                    build_scope_filter(collection_id),
+                    *(perimeter_filters or []),
+                ]
             }
         },
         "aggregations": {
             "cite_types": {"terms": {"field": "citeType", "size": GRANULARITIES_SIZE}}
         }
-    })
+    }
+
+
+def get_granularities(index: str, collection_id: str, perimeter_filters: list | None = None) -> list:
+    """
+    Fragment types (citeType) of the collection, scoped to the selected
+    perimeter (collections, resources) so each count matches the results the
+    level would return.
+    """
+    result = current_app.elasticsearch.search(
+        index=index,
+        body=build_granularities_body(collection_id, perimeter_filters)
+    )
 
     return [
         {"citeType": bucket["key"], "count": bucket["doc_count"]}
@@ -1435,7 +1453,10 @@ def register_search_endpoint(
             )
 
             r["scope"] = scope
-            r["granularities"] = get_granularities(index, collection_id)
+            # shortcut: granularity counts follow the collections/resources perimeter only; extend to the text query and other facets (issues #17/#18) when the counter semantics are settled.
+            r["granularities"] = get_granularities(
+                index, collection_id, resource_facet_filters + collection_filters
+            )
             r["duration"] = float('%.4f' % (time.time() - start_time))
 
         except Exception as e:
