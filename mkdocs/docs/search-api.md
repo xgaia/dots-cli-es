@@ -111,8 +111,9 @@ At fragment scope, `citeType` restricts the results to one or more fragment type
 (`citeType=acte`, `citeType=article`; comma-separated for several). It is refused at resource scope
 (**HTTP 400**).
 
-Every response carries `granularities`, the fragment types of the collection (`collectionId`) with
-their number of fragments, whatever the query and filters: the levels a client can offer.
+Every response carries `granularities`, the fragment types of the collection (`collectionId`)
+present in the selected perimeter (`collections`, `resources` facets), with their number of
+fragments: the levels a client can offer. The text query and the other facets do not narrow them.
 
 ```json
 "granularities": [{"citeType": "acte", "count": 12288}, {"citeType": "part", "count": 266}]
