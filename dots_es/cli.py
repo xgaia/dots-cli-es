@@ -2254,30 +2254,34 @@ async def crawl_branch(app, chain: list[str], chain_label: list[str], collection
                         # ─────────────────────────────
                         data = resource_results.get(member_id)
 
+                        # ThunderDots omits a resource whose TEI document does
+                        # not parse; skipping one must not abort the whole crawl.
+                        if not data:
+                            print(f"Skipped resource absent from ThunderDots results: {member_id}")
+                            continue
 
-                        if data:
-                            # injection du contexte crawl (inchangé fonctionnellement)
+                        # injection du contexte crawl (inchangé fonctionnellement)
 
-                            resource_metadata = extract_metadata(
-                                data,
-                                parent_id=parent_id,
-                                parent_path=collection_metadata.get("path"),
-                                parent_path_ids=collection_metadata.get("path_ids")
-                            )
+                        resource_metadata = extract_metadata(
+                            data,
+                            parent_id=parent_id,
+                            parent_path=collection_metadata.get("path"),
+                            parent_path_ids=collection_metadata.get("path_ids")
+                        )
 
-                            #10juillet resource_metadata = extract_metadata(
-                            #     data,
-                            #     parent_id=parent_id,
-                            #     parent_path=collection_metadata.get("path"),
-                            #     parent_path_ids=collection_metadata.get("path_ids")
-                            # )
+                        #10juillet resource_metadata = extract_metadata(
+                        #     data,
+                        #     parent_id=parent_id,
+                        #     parent_path=collection_metadata.get("path"),
+                        #     parent_path_ids=collection_metadata.get("path_ids")
+                        # )
 
-                            # resource_metadata = {
-                            #     **data,
-                            #     "parent_id": parent_id,
-                            #     "parent_path": collection_metadata.get("path"),
-                            #     "parent_path_ids": collection_metadata.get("path_ids")
-                            # }
+                        # resource_metadata = {
+                        #     **data,
+                        #     "parent_id": parent_id,
+                        #     "parent_path": collection_metadata.get("path"),
+                        #     "parent_path_ids": collection_metadata.get("path_ids")
+                        # }
 
                         if resource_queue is not None:
 
