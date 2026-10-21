@@ -1,13 +1,20 @@
 from dots_es.api.search import build_granularities_body
 
 
-def test_granularities_are_scoped_to_the_selected_perimeter():
+def test_granularities_apply_the_caller_must_and_filters():
     body = build_granularities_body(
-        "cartulaires", [{"terms": {"resource_id": ["NDRC-AB"]}}]
+        [{"term": {"type.keyword": "fragment"}}, {"match": {"content": "Guérard"}}],
+        [
+            {"prefix": {"collection_facets": "cartulaires###"}},
+            {"terms": {"resource_id": ["NDRC-AB"]}},
+        ],
     )
 
-    assert body["query"]["bool"]["filter"] == [
+    assert body["query"]["bool"]["must"] == [
         {"term": {"type.keyword": "fragment"}},
+        {"match": {"content": "Guérard"}},
+    ]
+    assert body["query"]["bool"]["filter"] == [
         {"prefix": {"collection_facets": "cartulaires###"}},
         {"terms": {"resource_id": ["NDRC-AB"]}},
     ]
@@ -16,10 +23,7 @@ def test_granularities_are_scoped_to_the_selected_perimeter():
     }
 
 
-def test_granularities_without_perimeter_scope_the_collection_only():
-    body = build_granularities_body("cartulaires")
+def test_granularities_without_clauses_are_unfiltered():
+    body = build_granularities_body()
 
-    assert body["query"]["bool"]["filter"] == [
-        {"term": {"type.keyword": "fragment"}},
-        {"prefix": {"collection_facets": "cartulaires###"}},
-    ]
+    assert body["query"]["bool"] == {"must": [], "filter": []}

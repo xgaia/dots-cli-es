@@ -111,9 +111,11 @@ At fragment scope, `citeType` restricts the results to one or more fragment type
 (`citeType=acte`, `citeType=article`; comma-separated for several). It is refused at resource scope
 (**HTTP 400**).
 
-Every response carries `granularities`, the fragment types of the collection (`collectionId`)
-present in the selected perimeter (`collections`, `resources` facets), with their number of
-fragments: the levels a client can offer. The text query and the other facets do not narrow them.
+Every response carries `granularities`, the fragment types of the collection (`collectionId`) present
+in the current results, with their number of fragments: the levels a client can offer. They follow
+the same rule as the facets: the text query, the facets and the date ranges narrow them, while the
+listed types themselves do not. At resource scope the matching resources are resolved to their ids,
+since a fragment carries no resource metadata.
 
 ```json
 "granularities": [{"citeType": "acte", "count": 12288}, {"citeType": "part", "count": 266}]
@@ -204,6 +206,11 @@ aggregation per non-range `KEYWORD` field declared with `facet=True`. At resourc
 `RESOURCE_INDEX`, one document per resource, so its `doc_count` is the **exact number of resources**;
 at fragment scope it counts fragments.
 
+Every facet counts, for each of its values, the documents matching the query and the other selected
+facets, **ignoring its own selection**: a value never narrows its own facet, so the values it could
+add stay visible. A metadata facet is therefore a `global` aggregation wrapping a `filter` that
+applies every clause except its own.
+
 A registry facet is only returned when at least one document of the perimeter carries it: the
 resources of the collection at resource scope, the fragments of the collection and of the requested
 `citeType` at fragment scope. A query or a selection can empty a facet, never remove it, so a
@@ -221,7 +228,8 @@ Two facets do not come from the registry and filter with OR logic:
   full-text mode). Selecting a value filters on its `resource_id`. The first 1,000 resources are
   listed.
 
-Neither narrows its own values when a value is selected, so the other values stay available.
+Neither narrows its own values when a value is selected, so the other values stay available — the
+same rule as the registry facets.
 
 ## Sorting
 

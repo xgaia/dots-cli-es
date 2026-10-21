@@ -770,9 +770,20 @@ def get_value(
 # Metadata facets helpers
 # ----------------------------------------------------------------------
 
-def build_searchfield_aggs(exclude_ids: set[str] | None = None, scope: str = "resource"):
+def build_self_excluded_facet_aggs(
+    must: list,
+    filters: list,
+    facet_clauses: dict,
+    exclude_ids: set[str] | None = None,
+    scope: str = "resource",
+):
     """
-    Build the terms aggregations for the metadata facets.
+    One global+filter aggregation per metadata facet.
+
+    Each facet counts the documents matching `must` and every filter except
+    its own clause (`facet_clauses`, keyed by canonical facet key), so a
+    selected value never narrows its own facet: the other selected facets,
+    the query term (in `must`) and the ranges still apply.
 
     exclude_ids: facets explicitly disabled by the client
     (searchConfig.facets, entries with "enabled": false). This mirrors the
@@ -790,12 +801,23 @@ def build_searchfield_aggs(exclude_ids: set[str] | None = None, scope: str = "re
         if field.type != SearchFieldType.KEYWORD:
             continue
 
-        es_field = facet_es_field(field, scope)
+        own = facet_clauses.get(field.key)
+        others = [clause for clause in filters if clause is not own]
 
         aggs[field.id] = {
-            "terms": {
-                "field": es_field,
-                "size": 15000
+            "global": {},
+            "aggs": {
+                "filtered": {
+                    "filter": {"bool": {"must": must, "filter": others}},
+                    "aggs": {
+                        "values": {
+                            "terms": {
+                                "field": facet_es_field(field, scope),
+                                "size": 15000
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -925,14 +947,19 @@ def extract_searchfield_facets(aggregations, exclude_ids: set[str] | None = None
     Extract the terms facets from the ES result.
 
     exclude_ids and scope must mirror the ones passed to
-    build_searchfield_aggs, otherwise empty facets would be returned for the
-    aggregations that were never requested.
+    build_self_excluded_facet_aggs, otherwise empty facets would be returned
+    for the aggregations that were never requested.
     """
     facets = {}
 
     for field in facet_fields(exclude_ids, scope):
 
-        buckets = aggregations.get(field.id, {}).get("buckets", [])
+        buckets = (
+            aggregations.get(field.id, {})
+            .get("filtered", {})
+            .get("values", {})
+            .get("buckets", [])
+        )
 
         # The aggregation is named after the internal id, but the facet is
         # published under its canonical key: that is the only vocabulary a

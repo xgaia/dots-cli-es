@@ -4,7 +4,7 @@ from dots_es.api.search import build_resource_facet_clause
 
 from dots_es.api.search_fields import (
     build_facet_presence_agg,
-    build_searchfield_aggs,
+    build_self_excluded_facet_aggs,
     extract_searchfield_facets,
     facet_fields,
     get_facet_es_field,
@@ -15,16 +15,18 @@ from dots_es.api.search_fields import (
 
 
 def test_fragment_facets_read_fragment_metadata_and_count_fragments():
-    aggs = build_searchfield_aggs(scope="fragment")
+    aggs = build_self_excluded_facet_aggs([], [], {}, scope="fragment")
 
-    assert aggs["dct:language"] == {
+    assert aggs["dct:language"]["aggs"]["filtered"]["aggs"]["values"] == {
         "terms": {"field": "fragment_metadata.dublincore.language.keyword", "size": 15000}
     }
     assert not any("resource_metadata" in str(agg) for agg in aggs.values())
 
 
 def test_fragment_facets_are_published_with_fragment_counts():
-    aggregations = {"dct:language": {"buckets": [{"key": "lat", "doc_count": 436}]}}
+    aggregations = {
+        "dct:language": {"filtered": {"values": {"buckets": [{"key": "lat", "doc_count": 436}]}}}
+    }
 
     facets = extract_searchfield_facets(aggregations, scope="fragment")
 
@@ -60,15 +62,17 @@ def test_facet_presence_without_any_facet():
 
 def test_resource_facets_count_resource_documents():
     # One document per resource in RESOURCE_INDEX: doc_count is exact, no cardinality
-    aggs = build_searchfield_aggs()
+    aggs = build_self_excluded_facet_aggs([], [], {})
 
-    assert aggs["dct:language"] == {
+    assert aggs["dct:language"]["aggs"]["filtered"]["aggs"]["values"] == {
         "terms": {"field": "resource_metadata.dublincore.language.keyword", "size": 15000}
     }
 
 
 def test_resource_facets_are_published_with_resource_counts():
-    aggregations = {"dct:language": {"buckets": [{"key": "fr", "doc_count": 3131}]}}
+    aggregations = {
+        "dct:language": {"filtered": {"values": {"buckets": [{"key": "fr", "doc_count": 3131}]}}}
+    }
 
     facets = extract_searchfield_facets(aggregations)
 

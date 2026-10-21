@@ -17,7 +17,7 @@ from dots_es.api.temporal import (
 )
 
 from dots_es.api.search_fields import (
-    build_searchfield_aggs,
+    build_self_excluded_facet_aggs,
     build_facet_presence_agg,
     extract_searchfield_facets,
     present_facet_keys,
@@ -426,6 +426,27 @@ def get_resource_titles(resource_index: str, resource_ids) -> dict:
     }
 
 
+def collect_resource_ids(index: str, query: dict) -> list:
+    """
+    Ids of the resources matching a resource query.
+
+    Granularities run on FRAGMENT_INDEX, which carries no resource_metadata: a
+    resource-scoped search resolves the matching resources to a `resource_id`
+    filter this way.
+    """
+    # shortcut: the terms aggregation is capped at RESOURCE_HITS_PAGE ids; raise
+    # it if a collection ever matches more resources.
+    result = current_app.elasticsearch.search(index=index, body={
+        "size": 0,
+        "query": query,
+        "aggregations": {
+            "ids": {"terms": {"field": "resource_id", "size": RESOURCE_HITS_PAGE}}
+        }
+    })
+
+    return [bucket["key"] for bucket in result["aggregations"]["ids"]["buckets"]]
+
+
 # Facet of the resources: values "id###title", like the collections facet
 RESOURCES_FACET = "resources"
 RESOURCES_FACET_SIZE = 1000
@@ -481,21 +502,19 @@ def extract_resources_facet(aggregations: dict, resource_index: str) -> list:
     return values
 
 
-def build_granularities_body(collection_id: str, perimeter_filters: list | None = None) -> dict:
+def build_granularities_body(must: list | None = None, filters: list | None = None) -> dict:
     """
-    ES body of the citeType aggregation: the fragment types of the collection
-    present in the selected perimeter (collections, resources), the levels a
-    fragment search can offer.
+    ES body of the citeType aggregation: the fragment types a fragment search
+    can offer, restricted to the caller's clauses (query term, facets, ranges,
+    perimeter). It runs on FRAGMENT_INDEX, which carries no resource_metadata:
+    a resource-scoped search passes a `resource_id` filter instead.
     """
     return {
         "size": 0,
         "query": {
             "bool": {
-                "filter": [
-                    {"term": {"type.keyword": "fragment"}},
-                    build_scope_filter(collection_id),
-                    *(perimeter_filters or []),
-                ]
+                "must": must or [],
+                "filter": filters or [],
             }
         },
         "aggregations": {
@@ -504,15 +523,14 @@ def build_granularities_body(collection_id: str, perimeter_filters: list | None 
     }
 
 
-def get_granularities(index: str, collection_id: str, perimeter_filters: list | None = None) -> list:
+def get_granularities(index: str, must: list | None = None, filters: list | None = None) -> list:
     """
-    Fragment types (citeType) of the collection, scoped to the selected
-    perimeter (collections, resources) so each count matches the results the
-    level would return.
+    Fragment types (citeType) matching the search clauses, so each count equals
+    the results the level would return.
     """
     result = current_app.elasticsearch.search(
         index=index,
-        body=build_granularities_body(collection_id, perimeter_filters)
+        body=build_granularities_body(must, filters)
     )
 
     return [
@@ -748,6 +766,14 @@ def register_search_endpoint(
         resource_facet_filters = []
         other_filters = []
 
+        # Selected clause per metadata facet (canonical key), so a facet's own
+        # aggregation can exclude it and count what each value would add.
+        facet_clauses = {}
+
+        # Scope of the citeType aggregation, set by each search case below.
+        granularity_must = []
+        granularity_filters = []
+
         try:
 
             # === CAS 3 : Fragment search, notice or full-text, one hit per fragment ===
@@ -788,7 +814,7 @@ def register_search_endpoint(
                     "size": page_size,
                     "track_total_hits": True,
                     "track_scores": True,
-                    "aggregations": build_searchfield_aggs(excluded_facets, scope)
+                    "aggregations": {}
                 }
 
                 query_type = "fragment_notice" if no_highlight else "fulltext"
@@ -828,6 +854,8 @@ def register_search_endpoint(
                             match_any=facet_field == "collections"
                         )
 
+                        facet_clauses[facet_field] = clause
+
                         if facet_field == "collections":
                             collection_filters.append(clause)
                         else:
@@ -837,6 +865,17 @@ def register_search_endpoint(
 
                 base_must = body_query["query"]["bool"]["must"]
                 base_filters = body_query["query"]["bool"]["filter"]
+
+                body_query["aggregations"].update(
+                    build_self_excluded_facet_aggs(
+                        base_must, base_filters, facet_clauses, excluded_facets, scope
+                    )
+                )
+
+                # Granularity: every clause, except the granularity levels
+                # themselves, so all types stay selectable.
+                granularity_must = base_must
+                granularity_filters = [c for c in base_filters if c not in level_filters]
 
                 if with_resources:
                     # Counts fragments; the selected resources do not narrow their own facet
@@ -981,10 +1020,6 @@ def register_search_endpoint(
                     }
                 }
 
-                body_query["aggregations"].update(
-                    build_searchfield_aggs(excluded_facets)
-                )
-
                 # Facets without any value on the resources of the collection are not returned
                 body_query["aggregations"]["facet_presence"] = build_facet_presence_agg(
                     [{"term": {"type.keyword": "Resource"}}, scope_filter],
@@ -1021,6 +1056,8 @@ def register_search_endpoint(
                             match_any=facet_field == "collections"
                         )
 
+                        facet_clauses[facet_field] = clause
+
                         if facet_field == "collections":
                             collection_filters.append(clause)
                             body_query["query"]["bool"].setdefault("filter", []).append(clause)
@@ -1054,6 +1091,12 @@ def register_search_endpoint(
                 base_must = body_query["query"]["bool"]["must"]
                 base_filters = body_query["query"]["bool"]["filter"]
 
+                body_query["aggregations"].update(
+                    build_self_excluded_facet_aggs(
+                        base_must, base_filters, facet_clauses, excluded_facets
+                    )
+                )
+
                 if with_collections:
                     body_query["aggregations"].update(coll_agg)
 
@@ -1078,6 +1121,15 @@ def register_search_endpoint(
                     body_query["query"]["bool"]["must"].extend(
                         [build_open_range(r) for r in ranges]
                     )
+
+                # Granularities run on FRAGMENT_INDEX: resolve the resources
+                # matching the notice query, the facets and the ranges to a
+                # resource_id filter.
+                granularity_filters = [{
+                    "terms": {
+                        "resource_id": collect_resource_ids(resource_index, body_query["query"])
+                    }
+                }]
 
                 search_result = current_app.elasticsearch.search(index=resource_index, body=body_query)
                 print('\nbody_query')
@@ -1197,6 +1249,8 @@ def register_search_endpoint(
                         match_any=facet_field == "collections"
                     )
 
+                    facet_clauses[facet_field] = clause
+
                     if facet_field == "collections":
                         collection_filters.append(clause)
                     else:
@@ -1252,7 +1306,6 @@ def register_search_endpoint(
                                 }
                             }
                         },
-                        **build_searchfield_aggs(excluded_facets),
                         # Facets without any value on the resources of the collection are not returned
                         "facet_presence": build_facet_presence_agg(
                             [{"term": {"type.keyword": "Resource"}}, build_scope_filter(collection_id)],
@@ -1260,6 +1313,25 @@ def register_search_endpoint(
                         )
                     }
                 }
+
+                body_query["aggregations"].update(
+                    build_self_excluded_facet_aggs(
+                        [build_open_range(r) for r in ranges],
+                        [hit_ids] + resource_filters,
+                        facet_clauses,
+                        excluded_facets
+                    )
+                )
+
+                # Granularities run on FRAGMENT_INDEX: keep the text query on
+                # the fragments and restrict to the resources matching the
+                # resource-level filters (resolved to ids).
+                granularity_must = fragment_query["bool"]["must"]
+                granularity_filters = fragment_query["bool"]["filter"] + [{
+                    "terms": {
+                        "resource_id": collect_resource_ids(resource_index, body_query["query"])
+                    }
+                }]
 
                 if with_collections:
                     # The selected collections do not narrow their own facet
@@ -1453,9 +1525,10 @@ def register_search_endpoint(
             )
 
             r["scope"] = scope
-            # shortcut: granularity counts follow the collections/resources perimeter only; extend to the text query and other facets (issues #17/#18) when the counter semantics are settled.
+            # Granularities reflect the same query, facets and ranges as the
+            # results, so each count equals what selecting the level would return.
             r["granularities"] = get_granularities(
-                index, collection_id, resource_facet_filters + collection_filters
+                index, granularity_must, granularity_filters
             )
             r["duration"] = float('%.4f' % (time.time() - start_time))
 
