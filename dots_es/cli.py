@@ -1430,7 +1430,6 @@ async def index_resource_passages_async(
     document = {
         "resource_id": resource_id,
         "type": "Resource",
-        "level": 0,
         "resource_metadata": sanitize_resource_metadata(
                     resource_metadata
                 ),
@@ -1438,11 +1437,6 @@ async def index_resource_passages_async(
         "temporal": temporal,
         "collections": [{
             "collection_id": collection_metadata["id"],
-            "collection_title": collection_metadata["title"],
-            "path": collection_metadata["path"],
-            "path_ids": collection_metadata["path_ids"],
-            "level": collection_metadata["level"],
-            "dublincore": collection_metadata.get("dublincore", {}),
         }],
         "collection_facets": build_collection_facets(collection_metadata),
     }

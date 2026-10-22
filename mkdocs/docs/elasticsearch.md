@@ -63,8 +63,9 @@ Same settings, one document per resource. Its five dynamic templates are the res
 counterparts of the ones above: `temporal_dates`, `temporal_years`, `temporal_years_end` and
 `temporal_strings` on `temporal.*`, and `resource_metadata_strings` on `resource_metadata.*`.
 
-Explicit properties: `type`, `resource_id`, `level`, `collection_facets`, the dynamic objects
-`resource_metadata` and `temporal`, and the **nested** object `collections`.
+Explicit properties: `type`, `resource_id`, `collection_facets`, the dynamic objects
+`resource_metadata` and `temporal`, and the **nested** object `collections` (holding only
+`collection_id`).
 
 !!! warning "New top-level fields need a mapping change"
     Because the root is `strict`, a document carrying a top-level field that the conf does not

@@ -13,6 +13,14 @@ def test_strings_are_never_detected_as_dates(index):
     assert mappings["date_detection"] is False
 
 
+def test_resource_mapping_only_keeps_read_collection_subfields():
+    with resources.files("dots_es").joinpath("elasticsearch", "dots_resources.conf.json").open() as f:
+        properties = json.load(f)["mappings"]["properties"]
+
+    assert "level" not in properties
+    assert set(properties["collections"]["properties"]) == {"collection_id"}
+
+
 def test_collection_index_mapping_is_removed():
     # The collections index was written but never read: no mapping, no config key
     mapping = resources.files("dots_es").joinpath("elasticsearch", "dots_collections.conf.json")

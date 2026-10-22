@@ -78,22 +78,10 @@
         "type": "keyword"
       },
 
-      "level": {
-        "type": "integer"
-      },
-
       "collections": {
         "type": "nested",
         "properties": {
-          "collection_id": { "type": "keyword" },
-          "collection_title": { "type": "keyword" },
-          "path": { "type": "keyword" },
-          "path_ids": { "type": "keyword" },
-          "level": { "type": "integer" },
-          "dublincore": {
-            "type": "object",
-            "dynamic": true
-          }
+          "collection_id": { "type": "keyword" }
         }
       },
       "collection_facets": {
