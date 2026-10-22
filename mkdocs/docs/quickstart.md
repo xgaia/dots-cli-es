@@ -24,7 +24,6 @@ source:
   TARGET_COLLECTION: "theater"
 config:
   ELASTICSEARCH_URL: "http://localhost:9200"
-  COLLECTION_INDEX: "dots_collections"
   RESOURCE_INDEX: "dots_resources"
   FRAGMENT_INDEX: "dots_fragments"
 ```

@@ -1,11 +1,10 @@
 # Elasticsearch mappings
 
-Four JSON files shipped with the package define how the indexes are built:
+Three JSON files shipped with the package define how the indexes are built:
 
 ```
 dots_es/elasticsearch/
 ├── _global.conf.json          # settings, applied to every index
-├── dots_collections.conf.json  # mappings for the collections index
 ├── dots_fragments.conf.json    # mappings for the passages index
 └── dots_resources.conf.json    # mappings for the resources index
 ```
@@ -31,22 +30,7 @@ dots_es/elasticsearch/
     `folding` depends on `icu_folding`. Without the `analysis-icu` plugin installed in Elasticsearch,
     creating the indexes fails. See [Installation](installation.md).
 
-The declared `keyword` *analyzer* is not referenced by either mapping file — `dots_collections` uses
-the built-in `french` analyzer instead.
-
-## `dots_collections.conf.json`
-
-`"dynamic": "strict"`, with explicit properties only:
-
-- `id`, `type`, `path`, `path_ids`, `parent_id`, `dtsVersion` — `keyword`;
-- `title` — `text` / `french`, with a `raw` keyword sub-field; `description` — `text` / `french`;
-- `level`, `totalItems`, `totalChildren`, `totalParents` — `integer`;
-- `download`, `dublincore`, `extensions` — `object`, `dynamic: true`;
-- `members` — `object` with **`"enabled": false`**.
-
-!!! info "Why `members` is disabled"
-    Members are stored but not indexed. This is deliberate: indexing them would create one field per
-    member id and blow through the field-count limit.
+The declared `keyword` *analyzer* is not referenced by either mapping file.
 
 ## `dots_fragments.conf.json`
 
@@ -66,7 +50,7 @@ without a mapping change:
     like one (`1241-03`), before any dynamic template applies. Every later value that is not an ISO
     date (`1160–1196`) then rejects its **whole document**: on the cartulaires, 2,029 fragments were
     lost that way. Dates are indexed on purpose under `temporal` and `fragment_temporal`; every other
-    metadata string stays text. The same setting applies to `dots_collections`.
+    metadata string stays text.
 
 Explicit properties include `resource_id`, `passage_id`, `citeType`, `path`, `path_ids`,
 `collection_facets` (keyword), `level` (integer), `title` and `content` (`text` / `folding`), the dynamic

@@ -32,7 +32,6 @@ is fixed: one deployment, one configuration directory.
 | Key | Controls |
 |---|---|
 | `ELASTICSEARCH_URL` | ES endpoint used by both the CLI and the API. |
-| `COLLECTION_INDEX` | Index holding collections. Default `dots_collections`. |
 | `RESOURCE_INDEX` | Index holding the resources, one document each. Default `dots_resources`, also when the key is missing. |
 | `FRAGMENT_INDEX` | Index holding the passages. Default `dots_fragments`. |
 | `SEARCH_RESULT_PER_PAGE` | Default `page[size]` of the search API. Default `200`. |

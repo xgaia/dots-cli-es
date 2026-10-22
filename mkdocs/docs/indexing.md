@@ -13,14 +13,13 @@ dots-es-cli [--config local|staging|prod] index [--collections id1,id2]
 2. **Crawl from memory.** The crawler resolves each collection and resource from the dictionaries
    built at step 1 instead of issuing an HTTP request per node. Records are normalised and written as
    JSONL under `out/`.
-3. **Ensure the indexes exist.** For each of `FRAGMENT_INDEX`, `RESOURCE_INDEX` and `COLLECTION_INDEX`: if missing, it
+3. **Ensure the indexes exist.** For each of `FRAGMENT_INDEX` and `RESOURCE_INDEX`: if missing, it
    is created from the [mapping files](elasticsearch.md); if present, a
    [mapping-drift warning](elasticsearch.md#mapping-drift) is printed when the live `dynamic` setting
    differs from the conf.
 4. **Bulk-index passages** into `FRAGMENT_INDEX`, with `_id = "{resource_id}::{passage_id}"`.
 5. **Index resource documents** into `RESOURCE_INDEX`, one by one.
-6. **Index collections** into `COLLECTION_INDEX`.
-7. **Print a summary** and write the [CSV reports](reporting.md).
+6. **Print a summary** and write the [CSV reports](reporting.md).
 
 !!! info "Fragments come from ThunderDots, not from TEI parsing here"
     Passages are built **only** from the pre-normalised `fragments` returned by ThunderDots

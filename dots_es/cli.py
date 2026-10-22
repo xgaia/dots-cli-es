@@ -39,7 +39,7 @@ class App:
         ) if self.config.get("ELASTICSEARCH_URL") else None
 
         # Combined indexes string for ES
-        self.all_indexes = f"{self.config['FRAGMENT_INDEX']},{self.config['RESOURCE_INDEX']},{self.config['COLLECTION_INDEX']}"
+        self.all_indexes = f"{self.config['FRAGMENT_INDEX']},{self.config['RESOURCE_INDEX']}"
 
         # Store excluded collections as lowercase for case-insensitive comparison
         self.excluded_collections = {c.lower() for c in self.config.get("ADDITIONAL_EXCLUDED_COLLECTIONS", [])}
@@ -145,7 +145,7 @@ def get_indexation_csv_paths(app):
         ),
         "collection_exceptions": os.path.join(
             base_dir,
-            f"{ts}_{app.config['COLLECTION_INDEX']}_indexation_exceptions.csv"
+            f"{ts}_collection_exceptions.csv"
         ),
         "timing": os.path.join(
             base_dir,
@@ -160,15 +160,6 @@ def get_indexation_csv_paths(app):
             f"{ts}_passage_exceptions.csv"
         )
     }
-
-def ensure_out_directory_exists():
-    """Assure que le dossier /out existe."""
-    out_dir = "out"
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-        print(f"Dossier '{out_dir}' créé.")
-    else:
-        print(f"Dossier '{out_dir}' déjà existant.")
 
 def sanitize_dts_json(data: dict, app, collection_id: str):
     """
@@ -305,26 +296,6 @@ def report_collection_exception(app, collection_id: str, error: Exception, conte
             "error_type": type(error).__name__,
             "error_message": str(error),
             "context": context
-        }
-    )
-
-def report_collection_indexation_errors(app, collection_id: str, error: Exception):
-    _csv_path = get_indexation_csv_paths(app)["collection_exceptions"]
-    report_indexation_event(
-        csv_path=_csv_path,
-        header=[
-            "timestamp",
-            "collection_id",
-            "error_type",
-            "error_message",
-            "context"
-        ],
-        row={
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "collection_id": collection_id,
-            "error_type": type(error).__name__,
-            "error_message": str(error),
-            "context": "collection_indexation"
         }
     )
 
@@ -548,8 +519,8 @@ def warn_on_mapping_drift(app, es, index_name):
     Signale qu'un index existant ne porte pas le mapping de son fichier de conf.
 
     Un index créé implicitement par un premier es.index() hérite du mapping
-    dynamique par défaut : chaque nouvelle clé d'objet (ex. members.<id>) devient
-    un champ, et l'index finit par heurter index.mapping.total_fields.limit (1000).
+    dynamique par défaut : chaque nouvelle clé d'objet (ex. fragment_metadata.<key>)
+    devient un champ, et l'index finit par heurter index.mapping.total_fields.limit (1000).
     """
     try:
         conf = resources.files("dots_es").joinpath(
@@ -1215,22 +1186,6 @@ def sanitize_resource_metadata(
 
     return cleaned
 
-def sanitize_collection_metadata(
-    collection_metadata: dict
-):
-    """
-    Removes keys not expected for ES collections.
-    """
-
-    cleaned = dict(collection_metadata)
-
-    cleaned.pop(
-        "fragments",
-        None
-    )
-
-    return cleaned
-
 #10juillet def sanitize_resource_metadata(resource_metadata: dict) -> dict:
 #     """
 #     Return a clean copy of resource_metadata without heavy/internal fields.
@@ -1734,33 +1689,6 @@ async def index_resource_passages_async(
 #     if not async_client_provided:
 #         await client.aclose()
 
-async def index_collection(app, collection_metadata):
-    """
-    Async helper to write collection metadata into a JSONL file and update index stats.
-    """
-    ensure_out_directory_exists()  # Make sure the 'out' folder exists
-
-    collection_id = collection_metadata["id"]
-    collection_jsonl_path = f"out/collections.jsonl"
-
-    # Write collection metadata to JSONL
-    try:
-        with open(collection_jsonl_path, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(sanitize_collection_metadata(collection_metadata)) + '\n')
-        print(f"Collection indexed and added to {collection_jsonl_path}")
-
-        # Update the stats for indexed collections
-
-        if collection_metadata.get("id", "").lower() != app.config.get("TARGET_COLLECTION", "").lower():
-            if collection_metadata.get("parent_id", "").lower() == app.config.get("TARGET_COLLECTION", "").lower():
-                app.index_stats["projects"] += 1
-            else:
-                app.index_stats["collections"] += 1
-
-    except Exception as e:
-        print(f"⚠️ Error indexing collection {collection_id}: {e}")
-        report_collection_exception(app, collection_metadata["id"], e, context="index_collection_exception")
-
 import httpx
 
 async def fetch_collection(app, collection_id: str):
@@ -2115,7 +2043,7 @@ async def resource_worker(
 #             parent_path_ids=None
 #         )
 
-async def crawl_branch(app, chain: list[str], chain_label: list[str], collection_index: str, target_collections: set | None, visited: set, semaphore: asyncio.Semaphore, resource_queue: asyncio.Queue | None = None, parent_id=None, parent_path=None, parent_path_ids=None,
+async def crawl_branch(app, chain: list[str], chain_label: list[str], target_collections: set | None, visited: set, semaphore: asyncio.Semaphore, resource_queue: asyncio.Queue | None = None, parent_id=None, parent_path=None, parent_path_ids=None,
     in_target_branch=False):
     """
     Crawl a single branch of collections from root -> target.
@@ -2199,8 +2127,12 @@ async def crawl_branch(app, chain: list[str], chain_label: list[str], collection
             collection_es_id = collection_metadata.get("id") or f"collection_{collection_id}"
 
             if index_current:
-                print('indexing collection index_current', index_current)
-                await index_collection(app, collection_metadata)
+                # The root target collection itself is not counted
+                if collection_metadata.get("id", "").lower() != app.config.get("TARGET_COLLECTION", "").lower():
+                    if collection_metadata.get("parent_id", "").lower() == app.config.get("TARGET_COLLECTION", "").lower():
+                        app.index_stats["projects"] += 1
+                    else:
+                        app.index_stats["collections"] += 1
 
             # ─────────────────────────────
             # MEMBERS LOOP (UNCHANGED LOGIC)
@@ -2234,7 +2166,6 @@ async def crawl_branch(app, chain: list[str], chain_label: list[str], collection
                         app=app,
                         chain=member_chain,
                         chain_label=member_chain_label,
-                        collection_index=collection_index,
                         target_collections=target_collections,
                         visited=visited,
                         semaphore=semaphore,
@@ -2303,7 +2234,7 @@ async def crawl_branch(app, chain: list[str], chain_label: list[str], collection
                             )
 
 
-async def crawl_collection(app, collection_id: str, collection_index: str, target_collections: set | None = None, parent_id=None, parent_path=None, parent_path_ids=None):
+async def crawl_collection(app, collection_id: str, target_collections: set | None = None, parent_id=None, parent_path=None, parent_path_ids=None):
     """
     Entry point to crawl collections.
     Handles full tree or only branches leading to target_collections.
@@ -2354,7 +2285,7 @@ async def crawl_collection(app, collection_id: str, collection_index: str, targe
         ))
         for chain, chain_label in chains:
             parent_id = chain[-2]
-            tasks.append(crawl_branch(app, chain, chain_label, collection_index, target_collections, visited, semaphore, resource_queue, parent_id, parent_path, parent_path_ids))
+            tasks.append(crawl_branch(app, chain, chain_label, target_collections, visited, semaphore, resource_queue, parent_id, parent_path, parent_path_ids))
         await asyncio.gather(*tasks)
 
     else:
@@ -2363,7 +2294,6 @@ async def crawl_collection(app, collection_id: str, collection_index: str, targe
             app=app,
             chain=[root_collection_id],
             chain_label=[],
-            collection_index=collection_index,
             target_collections=None,
             visited=visited,
             semaphore=semaphore,
@@ -2405,7 +2335,7 @@ def build_fragment_params(app) -> dict:
     return fragment_params
 
 
-async def dotsplorer(app, collections, _index_name):
+async def dotsplorer(app, collections):
     """
         Commande principale d'indexation :
         - Purge /out
@@ -2535,7 +2465,6 @@ async def dotsplorer(app, collections, _index_name):
         await crawl_collection(
             app=app,
             collection_id=root_collection_id,
-            collection_index=_index_name,
             target_collections=target_collections
         )
         # ─────────────────────────────
@@ -2670,7 +2599,6 @@ def make_cli():
             - Indexation Elasticsearch via index_jsonl()
                 - passages (FRAGMENT_INDEX)
                 - documents (RESOURCE_INDEX)
-                - collections (COLLECTION_INDEX)
             - Optionally, limit indexing to specific collections with --collections.
         """
 
@@ -2679,37 +2607,13 @@ def make_cli():
         es = app.elasticsearch
         doc_index = app.config["FRAGMENT_INDEX"]
         resource_index = app.config["RESOURCE_INDEX"]
-        coll_index = app.config["COLLECTION_INDEX"]
-
-        MERGE_COLLECTIONS_SCRIPT = """
-        if (ctx._source.collections == null) {
-          ctx._source.collections = params.collections;
-        } else {
-          for (c in params.collections) {
-            boolean exists = false;
-            for (e in ctx._source.collections) {
-              if (e.collection_id == c.collection_id) {
-                exists = true;
-                break;
-              }
-            }
-            if (!exists) {
-              ctx._source.collections.add(c);
-            }
-          }
-        }
-        """
-
         print('index collections:', collections)
-        print('index _index_name:', app.config['COLLECTION_INDEX'])
         print('index _index_name:', app.config['FRAGMENT_INDEX'])
         print('index _index_name:', app.config['RESOURCE_INDEX'])
         try:
-            _index_name = app.config['COLLECTION_INDEX']
             asyncio.run(dotsplorer(
                 app=app,
-                collections=collections,
-                _index_name=_index_name
+                collections=collections
             ))
 
         except Exception as e:
@@ -2718,7 +2622,7 @@ def make_cli():
 
         # Indexation ES
         # try:
-        for index_name in (doc_index, resource_index, coll_index):
+        for index_name in (doc_index, resource_index):
             if not es.indices.exists(index=index_name):
                 print(f"⚠️ Index {index_name} not found → creating with correct mapping")
                 # Appel positionnel correct pour update_conf
@@ -2852,33 +2756,9 @@ def make_cli():
 
         end_documents_indexation = time.perf_counter()
 
-        # -----------------------------
-        # 3 Indexer les collections
-        # -----------------------------
-        start_collections_indexation = time.perf_counter()
-
-        collection_file = os.path.join(out_dir, "collections.jsonl")
-        if os.path.exists(collection_file):
-            with open(collection_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    try:
-                        collection = json.loads(line)
-                        collection_es_id = collection.get("id") or f"collection_{collection.get('@id', 'unknown')}"
-                        app.elasticsearch.index(
-                            index=app.config["COLLECTION_INDEX"],
-                            id=collection_es_id,
-                            body=sanitize_collection_metadata(collection)
-                        )
-                        app.index_stats["collections_indexed"] = app.index_stats.get("collections_indexed", 0) + 1
-                    except Exception as e:
-                        report_collection_indexation_errors(app, collection_id=collection.get("id", "*"), error=e)
-
-        end_collections_indexation = time.perf_counter()
-
-        timer_collections_indexation = end_collections_indexation - start_collections_indexation
         timer_documents_indexation = end_documents_indexation - start_documents_indexation
         timer_fragments_indexation = end_fragments_indexation - start_fragments_indexation
-        timer_total_indexation = timer_collections_indexation + timer_documents_indexation + timer_fragments_indexation
+        timer_total_indexation = timer_documents_indexation + timer_fragments_indexation
 
         # -----------------------------
         # Reporting des durées par phase
@@ -2889,7 +2769,6 @@ def make_cli():
         for _phase_id, _duration in (
             ("fragments_indexation", timer_fragments_indexation),
             ("documents_indexation", timer_documents_indexation),
-            ("collections_indexation", timer_collections_indexation),
             ("total_indexation", timer_total_indexation),
         ):
             report_timing(timing_csv, {
@@ -2905,7 +2784,6 @@ def make_cli():
         print("📊  Résumé de l’indexation")
         print("=" * 60)
         # print(f"❌  Erreurs ES (bulk)                    : ")#{ app.index_stats["bulk_es_errors"] }
-        print(f"🗂️  Durée indexation collection         : { format_duration(timer_collections_indexation) }")
         print(f"📁  Durée indexation documents          : { timer_documents_indexation }")
         print(f"📄  Durée indexation fragments          : { timer_fragments_indexation }")
         print(f"🧩  Durée totale d'indexation           : { timer_total_indexation }")

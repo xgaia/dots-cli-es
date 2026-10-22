@@ -62,7 +62,6 @@ def test_missing_resource_does_not_abort_crawl(monkeypatch):
             app=app,
             chain=["R"],
             chain_label=["R"],
-            collection_index="c",
             target_collections=None,
             visited=set(),
             semaphore=asyncio.Semaphore(1),

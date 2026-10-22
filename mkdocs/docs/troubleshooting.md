@@ -36,7 +36,7 @@ Set `ES_USER` as well if the account is not `elastic`.
 
 ## "conf not found" during `update-conf`
 
-`update-conf` loads `{index_name}.conf.json`. If `FRAGMENT_INDEX` or `COLLECTION_INDEX` was renamed
+`update-conf` loads `{index_name}.conf.json`. If `FRAGMENT_INDEX` or `RESOURCE_INDEX` was renamed
 in the YAML without renaming the matching JSON file, the command prints *"conf not found"*, continues,
 and leaves you with an index that has **no mapping**. Rename the file in `dots_es/elasticsearch/` to
 match.

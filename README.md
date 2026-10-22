@@ -124,7 +124,7 @@ When the index doesn't exist it is created according to the project ES [configur
 This operation will delete the pre-existing index.
 
 <pre><code>
-(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>local/staging/prod</i></b>) update-conf --rebuild --indexes=<b><i>dots_collections/dots_resources/dots_fragments</i></b>
+(ES_PASSWORD=<b><i>ELASTIC_PASSWORD</i></b>) dots-es-cli (--config=<b><i>local/staging/prod</i></b>) update-conf --rebuild --indexes=<b><i>dots_resources/dots_fragments</i></b>
 </code></pre>
 
 The above command updates the indexes according to the project ES [configuration files](./dots_es/elasticsearch/).

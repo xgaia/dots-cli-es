@@ -24,10 +24,10 @@ the CLI starts:
 | `{ts}_indexed_passages_report.csv` | `timestamp, resource_id, passage_id` | One row per passage successfully built. This is your reference count. |
 | `{ts}_{FRAGMENT_INDEX}_indexation_exceptions.csv` | `timestamp, resource_id, passage_id, error_type, error_message, context` | A passage could not be built. **Also reused** for resource-level indexing failures, which write a shorter 5-column row — so this file can mix two row shapes. |
 | `{ts}_{FRAGMENT_INDEX}_no_text.csv` | `timestamp, resource_id, passage_id, citeType, level, reason, context` | A fragment has neither `content` nor `head`, and was **skipped**. `reason` is always `NoIndexableText`. |
-| `{ts}_{COLLECTION_INDEX}_indexation_exceptions.csv` | `timestamp, collection_id, error_type, error_message, context` | DTS collection fetch errors, JSONL write failures, and Elasticsearch collection indexing failures. |
+| `{ts}_collection_exceptions.csv` | `timestamp, collection_id, error_type, error_message, context` | DTS collection fetch errors. |
 | `{ts}_passage_exceptions.csv` | `timestamp, resource_id, passage_id, error_type, error_message, context` | JSON decode failures, bulk call failures, and **per-item Elasticsearch bulk rejections**. |
 | `{ts}_metadata_dts_sanitization.csv` | `timestamp, collection_id, json_path, error_type, value` | Empty JSON keys found while sanitising a raw DTS response. |
-| `{ts}_dots_indexation_timing.csv` | `timestamp, level, id, parent_id, duration_sec, duration_hms` | One row per indexing phase at the end of the run: `fragments_indexation`, `documents_indexation`, `collections_indexation` and their `total_indexation` parent. |
+| `{ts}_dots_indexation_timing.csv` | `timestamp, level, id, parent_id, duration_sec, duration_hms` | One row per indexing phase at the end of the run: `fragments_indexation`, `documents_indexation` and their `total_indexation` parent. |
 
 Every report carries its header row: the writer creates the file with its header the first time a row
 is appended, so a file is never produced headerless — even the ones that are not pre-created at the
